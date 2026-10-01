@@ -469,3 +469,82 @@ h1 .badge { font-size: 8px; letter-spacing: .5px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
 }
+.trace-panel { padding: 22px; background: #f9fbf6; }
+.trace-heading h2 { font-size: 25px; font-weight: 500; margin-top: 7px; letter-spacing: -.5px; }
+.trace-panel p { font-size: 12px; }
+.trace-endpoint { display: block; margin: 20px 0 10px; }
+.trace-endpoint select { font-weight: 600; }
+.trace-symptom { padding: 10px 12px; background: #eaf0e5; border-left: 3px solid #789168; }
+.trace-panel details { border: 1px solid #dce3d3; border-radius: 6px; padding: 12px; margin: 14px 0; background: #fff; }
+.trace-panel summary { cursor: pointer; font-size: 12px; font-weight: 600; line-height: 1.6; }
+.trace-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.trace-field-grid label { min-width: 0; }
+.trace-state { border-left: 3px dashed #aa8444; background: #f7f0de; padding: 13px; margin-top: 14px; font-size: 12px; }
+.trace-state p { margin: 5px 0 0; }
+.trace-assessment { padding: 15px 0; }
+.trace-layout { display: grid; grid-template-columns: minmax(160px, .8fr) minmax(240px, 1.2fr); gap: 16px; align-items: start; }
+.trace-layout nav { min-width: 0; }
+.trace-steps { padding: 0; margin: 0; list-style: none; }
+.trace-steps li { position: relative; margin: 0; padding: 0 0 12px; }
+.trace-steps li:not(:first-child)::before { content: ''; position: absolute; top: -12px; left: 22px; height: 12px; border-left: 2px solid #899f7a; }
+.trace-steps li.trace-link-state-gap::before, .trace-steps li.trace-link-source-gap::before { border-left: 2px dashed #a4834b; }
+.trace-steps li.trace-link-continuation::before { border-left: 2px dotted #6e8066; }
+.trace-steps button { display: flex; width: 100%; gap: 9px; align-items: flex-start; border: 1px solid #dce4d2; background: #fff; padding: 12px 8px; text-align: left; }
+.trace-steps button[aria-current=step] { border-color: #af8134; background: #fff7e4; box-shadow: 0 0 0 1px #d6b674; }
+.trace-number { flex-shrink: 0; border: 1px solid #ced7c7; width: 23px; height: 23px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; }
+.trace-steps strong { display: block; font-size: 11px; line-height: 1.45; }
+.trace-steps small { display: block; font-size: 9px; line-height: 1.5; margin-top: 5px; color: #647258; }
+.trace-detail { background: white; border: 1px solid #dce4d5; border-radius: 7px; padding: 17px; min-width: 0; position: sticky; top: 15px; }
+.trace-detail h3 { font-size: 18px; margin-top: 7px; }
+.trace-point-status { padding: 9px; border: 1px dashed #bdc9b2; background: #f5f8f0; }
+.trace-wire { font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+.trace-citations { display: flex; flex-direction: column; gap: 6px; }
+.trace-citations .citation { min-width: 0; width: 100%; }
+.trace-citations .citation strong { font-size: 10px; }
+.trace-citations .citation small { font-size: 10px; }
+.trace-back-next, .trace-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 15px 0; }
+.trace-recorder { border-top: 1px solid #dfe5d7; margin-top: 18px; padding-top: 17px; }
+.trace-recorder label { display: block; margin: 12px 0; font-size: 12px; }
+.trace-recorder p { font-size: 11px; }
+.trace-recorder fieldset { padding: 10px; margin: 12px 0; border: 1px solid #e0e5d7; border-radius: 5px; min-width: 0; }
+.trace-recorder legend { font-size: 10px; padding: 0 5px; }
+.trace-recorder input, .trace-recorder select, .trace-recorder textarea { font-size: 12px; }
+.trace-history article, .trace-branches article { padding: 15px 0; border-bottom: 1px solid #e5eadd; overflow-wrap: anywhere; }
+.trace-history article strong, .trace-history article small { display: block; font-size: 11px; line-height: 1.6; }
+.trace-history article small { color: #68765e; margin-top: 6px; }
+.trace-branches article h4 { font-size: 13px; }
+.trace-source-nav { padding: 13px; background: #eef2e6; border: 1px solid #dae1d0; border-top: 0; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.trace-source-nav > label { flex: 1; min-width: 160px; font-size: 11px; }
+.trace-source-nav > p { margin: 0; flex-basis: 100%; font-size: 10px; }
+.trace-source-nav select { font-size: 11px; padding: 9px; }
+.trace-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.trace-overlay polyline { stroke: #b27308; stroke-width: 3; stroke-dasharray: 6 4; fill: none; stroke-linecap: round; }
+.trace-overlay rect { fill: none; stroke: #997012; stroke-width: 1.5; stroke-dasharray: 3 3; }
+.guide-trace-entry { margin-bottom: 20px; width: 100%; }
+.component-trace-entry { margin-bottom: 17px; }
+@media (max-width: 1250px) {
+  .trace-layout { grid-template-columns: 1fr; }
+  .trace-steps { display: flex; overflow-x: auto; gap: 12px; padding-bottom: 10px; scroll-snap-type: x proximity; }
+  .trace-steps li { min-width: 175px; flex: 0 0 175px; padding: 0; scroll-snap-align: start; }
+  .trace-steps li:not(:first-child)::before { left: -12px; top: 35px; width: 12px; height: 0; border-left: 0; border-top: 2px dotted #899f7a; }
+  .trace-steps li.trace-link-state-gap::before, .trace-steps li.trace-link-source-gap::before { border-top: 2px dashed #a4834b; }
+  .trace-steps button { height: 100%; min-height: 114px; }
+  .trace-detail { position: static; }
+  .diagram-toolbar { flex-wrap: wrap; }
+}
+@media (max-width: 700px) {
+  .trace-panel { padding: 17px 12px; }
+  .trace-heading h2 { font-size: 24px; }
+  .trace-panel p { font-size: 13px; }
+  .trace-detail { padding: 14px; }
+  .trace-steps strong, .trace-steps small { font-size: 11px; }
+  .trace-panel summary { min-height: 28px; font-size: 13px; }
+  .trace-field-grid { gap: 10px; }
+  .trace-field-grid select { padding: 10px 6px; font-size: 12px; }
+  .trace-panel button, .trace-panel select { min-height: 42px; }
+  .trace-panel .trace-steps { max-width: 100%; }
+  .trace-recorder .trace-field-grid { grid-template-columns: 1fr; }
+  .trace-recorder input, .trace-recorder select, .trace-recorder textarea { font-size: 16px; }
+  .trace-source-nav { flex-direction: column; align-items: stretch; }
+  .trace-source-nav > label { width: 100%; }
+}

@@ -4,12 +4,13 @@ import type { DiagnosticCase } from './cases'
 import { getComponent } from './data'
 import { Icon } from './ui'
 
-export function Guide({ item, onAnswer, onEvidence, onEditFocus, onNotes }: {
+export function Guide({ item, onAnswer, onEvidence, onEditFocus, onNotes, onTrace }: {
   item: DiagnosticCase
   onAnswer: (id: QuestionId, value: string) => void
   onEvidence: (id: string) => void
   onEditFocus: (id: string) => void
   onNotes: () => void
+  onTrace: () => void
 }) {
   const [editing, setEditing] = useState<QuestionId | null>(null)
   const [history, setHistory] = useState(false)
@@ -28,6 +29,7 @@ export function Guide({ item, onAnswer, onEvidence, onEditFocus, onNotes }: {
     <div className="guide-title"><span className="guide-icon"><Icon name="bolt" /></span><div><span className="eyebrow">LET’S FIGURE IT OUT</span><h2>My blinkers aren’t working</h2></div><span className="badge">Guided</span></div>
     <div className="guide-intro"><span className="local-dot" />Deterministic guide · no AI or keys needed</div>
     <div className="guide-content">
+      <button className="button secondary small guide-trace-entry" onClick={onTrace}><Icon name="circuit" size={16} />Trace power to a lamp</button>
       {question ? <section className="question-card" aria-label="Current diagnostic question">
         <div className="question-meta"><span>{question.section}</span><span>{answered.length} recorded</span></div>
         <div className="progress-track"><span style={{ width: `${Math.max(5, (answered.length / 16) * 100)}%` }} /></div>

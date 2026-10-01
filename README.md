@@ -56,6 +56,44 @@ keyboard `+`, `-`, arrow keys, and `Home` when the viewport is focused.
 Focus dims areas outside a selected component's source region. The stable
 component map is an explanatory index, **not** a fabricated electrical schematic.
 
+## Trace power to a blinker
+
+Open **Trace power** in the diagram toolbar, **Trace power to a lamp** in the
+guide, or the trace action below a selected component. Choose a front lamp or
+one of the six individual rear lamp symbols. Rear "upper/middle/lower" means
+position **on the schematic**, not a verified inboard/outboard position on the car.
+
+The ordered companion traces a checked subset of **Scan 6.jpeg**:
+the **459 feed continuation** at the indicator relay, its rear-harness join,
+sequential motor/contact branches, the emergency/sequential-relay interface,
+the selected numbered lamp output, front harness joins where applicable, and
+the lamp's drawn return. Click a point for its circuit identity, source regions
+and evidence form. Source buttons open the matching original page with focus
+dimming and short, checked wire-run highlights. The source-view point selector
+and **Trace & record** return button preserve your place.
+
+**This is an honest partial connection trace, not a complete battery circuit or
+simulation.** Battery/protection-to-459 continuity, internal relay/motor contact
+states and the full return bond to battery negative are not established.
+The right-front lamp lead is printed **499**, while the relevant harness and
+legend identify **449**; the app does not silently join them. See the exact
+[trace evidence and gaps](docs/SOURCES.md#power-trace-subset).
+
+Record the ignition, turn, brake and hazard conditions of an **existing**
+observation. Then record a point as unknown, reportedly responding, reportedly
+not responding, or previously measured. Existing measurements retain the raw
+reading, units, reference, load state, notes and condition snapshot; no numeric
+threshold diagnoses a part or treats an unloaded reading as a good supply.
+Reports can bound a **candidate review interval**, not a verified fault boundary.
+Bank-level intake observations never establish an individual rear bulb's state.
+
+Changing endpoint, conditions or an intake answer retires earlier comparisons,
+including when switching back. History is retained in local saves and JSON
+handoffs. Edits append replacement reports; **Undo last point report** withdraws
+a report without deleting it. **Reset current trace evidence** starts a fresh
+comparison while retaining all history. No new probing or powered-testing
+procedure is authorized by any trace point.
+
 ## Phone companion and handoff
 
 The responsive guide works on a phone. For a private, trusted home LAN preview:
@@ -83,6 +121,7 @@ offline PWA: the page must initially load from a running server.
 | Private JPEG/PNG import, IndexedDB storage, source regions, pan/zoom | Included or publicly redistributed manual scans |
 | Branching deterministic intake, unknown/mismatch/heat stops | Electrical probing procedures, pinouts, fuse ratings or repair prescriptions |
 | Front/rear asymmetry, partial rear lamps, brake/hazard comparisons | Proof that a particular component has failed |
+| Source-backed partial power traces for eight lamp endpoints, source-run highlights and condition-specific reports | Complete battery-to-return route, verified relay states, timing or energized-flow simulation |
 | Multiple local cases, JSON handoff, notes and repair rechecks | Accounts, automatic device sync, cloud backup |
 | Usable without keys, no inference charges | Live AI explanations or simulated current flow |
 
@@ -106,12 +145,15 @@ driving. User-reported rechecks are not a roadworthiness certification.
 - No application API, analytics, remote fonts, external image service, model
   requests, or image uploads. Browser-side search and diagram controls are free.
 - Imports are bounded and validated: 2 MB case JSON, 40 local cases, 200 notes
-  per case, 2,000 characters per note; 30 images/200 MiB per batch, 25 MiB and
+  and 200 trace reports per case, 2,000 characters per note; 30 images/200 MiB per batch, 25 MiB and
   50 megapixels per image. Genuine JPEG/PNG signatures and decoding are checked.
   SVG/HTML and arbitrary source URLs are not accepted.
 - User-entered text is rendered as text, never executable markup. Imported
   answers must be a valid ordered path through the current deterministic guide.
   Saved conclusions are never trusted/imported: guidance is recomputed.
+- Older schema-v1 cases without traces load with an empty trace. New exports
+  include a separately versioned trace dataset; use the same current app build
+  on both devices. Active report contexts and source-point IDs are validated.
 - Corrupt saved case data is not silently overwritten. Recovery download and
   an explicit replacement action are available. Save/quota failures are visible.
 - Clearing site data, private browsing expiry or browser eviction can remove
@@ -145,9 +187,10 @@ Do not publish those artifacts from a private-manual run.
 
 Unit coverage includes safe/mismatch/unknown branches, both sides, individual
 rear lamps, modified wiring, downstream invalidation, malformed imports,
-case/storage failures and source-link identities. Browser coverage exercises
+case/storage failures, endpoint-specific connections, explicit source gaps,
+condition applicability, trace context invalidation and source-link identities. Browser coverage exercises
 the real guide, edits, notes, handoff, image import, source focus, persistence,
-panel controls and responsive layouts.
+panel controls, trace recording/edit/undo, original-scan overlays and responsive layouts.
 
 ## Architecture
 
@@ -158,6 +201,9 @@ or general-purpose CAD framework.
 - `src/data.ts`: source identities, component facts, normalized region citations.
 - `src/diagnostics.ts`: pure question-path, invalidation and triage rules.
 - `src/cases.ts`: strict portable case schema and local persistence.
+- `src/validation.ts`: shared strict case/answer validation.
+- `src/trace-data.ts`: bounded, cited connection subset and explicit source gaps.
+- `src/trace.ts`, `src/TracePanel.tsx`: context-specific trace evidence and UI.
 - `src/manuals.ts`: byte validation, fingerprints and IndexedDB transactions.
 - `src/Diagram.tsx`: stable component map and original-image viewer.
 - `src/Guide.tsx`, `src/Notes.tsx`, `src/Library.tsx`: task-specific UI.

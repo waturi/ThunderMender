@@ -8,6 +8,9 @@ import { Guide } from './Guide'
 import { Library } from './Library'
 import { Notes } from './Notes'
 import { downloadText, Icon, message, Modal } from './ui'
+import { TracePanel } from './TracePanel'
+import { invalidateTrace, setEndpoint, type TraceState } from './trace'
+import { getEndpoint, traceSteps } from './trace-data'
 
 function initialState(): { store: CaseStore; error: string } {
   try { return { store: loadCases(), error: '' } }
@@ -30,7 +33,8 @@ export default function App() {
   const [dialog, setDialog] = useState<Dialog>(null)
   const [selected, setSelected] = useState('turn-switch')
   const [pageId, setPageId] = useState('exterior-schematic')
-  const [mode, setMode] = useState<'map' | 'source'>('map')
+  const [mode, setMode] = useState<'map' | 'source' | 'trace'>('map')
+  const [traceSource, setTraceSource] = useState(false)
   const [focus, setFocus] = useState(false)
   const [focusRequest, setFocusRequest] = useState<{ citation: Citation; serial: number } | null>(null)
   const [search, setSearch] = useState('')
@@ -45,6 +49,12 @@ export default function App() {
   const image = images.find(i => i.pageId === pageId || i.id === pageId)
   const hasPage = (id: string) => images.some(i => i.pageId === id)
   const stopped = active.answers.safety && active.answers.safety !== 'clear'
+  const route = active.trace.endpointId ? traceSteps(active.trace.endpointId) : []
+  const tracePoint = route.find(s => s.id === active.trace.selectedStepId)
+  useEffect(() => {
+    setTraceSource(false); setFocusRequest(null)
+    setSelected(active.trace.endpointId ? getEndpoint(active.trace.endpointId).componentId : 'turn-switch')
+  }, [active.id])
 
   useEffect(() => {
     if (recovery) return
@@ -66,12 +76,14 @@ export default function App() {
     if (next?.components[0]) setSelected(next.components[0])
   }
   function showSource(citation: Citation) {
+    setTraceSource(false)
     setMode('source'); setPageId(citation.pageId); setFocus(true)
     setFocusRequest({ citation, serial: Date.now() })
     setMobileTab('workbench')
   }
   function selectComponent(id: string) {
     setSelected(id)
+    setTraceSource(false)
     if (mode === 'source') {
       const component = getComponent(id)
       const citation = component.citations.find(c => c.pageId === pageId) ?? component.citations[0]
@@ -80,7 +92,24 @@ export default function App() {
     }
   }
   function evidence(id: string) { setSelected(id); showSource(getComponent(id).citations[0]) }
-  function openPage(id: string) { setPageId(id); setFocusRequest(null); setMode('source'); setMobileTab('workbench'); setDialog(null) }
+  function openPage(id: string) { setPageId(id); setFocusRequest(null); setMode('source'); setTraceSource(false); setMobileTab('workbench'); setDialog(null) }
+  function changeTrace(trace: TraceState) {
+    change({ ...active, trace, updatedAt: new Date().toISOString() })
+    if (trace.endpointId) setSelected(getEndpoint(trace.endpointId).componentId)
+  }
+  function openTrace(componentId?: string) {
+    if (componentId === 'front-left' || componentId === 'front-right') changeTrace(setEndpoint(active.trace, componentId))
+    else if (componentId?.startsWith('rear-') && active.trace.endpointId && getEndpoint(active.trace.endpointId).componentId !== componentId) changeTrace({ ...invalidateTrace(active.trace), endpointId: null, selectedStepId: null })
+    else if (!componentId && active.trace.endpointId) setSelected(getEndpoint(active.trace.endpointId).componentId)
+    setMode('trace'); setTraceSource(false); setMobileTab('workbench')
+  }
+  function traceEvidence(citation: Citation) { showSource(citation); setTraceSource(true) }
+  function moveTracePoint(id: string) {
+    const step = route.find(s => s.id === id)
+    if (!step) return
+    changeTrace({ ...active.trace, selectedStepId: id })
+    traceEvidence(step.citations[0])
+  }
   function addCase() {
     if (store.cases.length >= MAX_CASES) { setError(`Limit of ${MAX_CASES} local cases reached. Export and delete a case first.`); return }
     const item = newCase()
@@ -140,15 +169,22 @@ export default function App() {
       </aside>}
       <main className="workbench" id="main-workbench">
         <div className="workbench-top"><div><div className="breadcrumbs">Exterior lighting <Icon name="chevron" size={12} /> Turn signals</div><h1>Turn signals<span className="badge subtle">1967 COUGAR</span></h1></div><div className="panel-toggles">{!sidebar && <button className="icon-button" aria-label="Show navigation" onClick={() => setSidebar(true)}><Icon name="search" /></button>}<button className="button small secondary" aria-expanded={guide} onClick={() => setGuide(!guide)}><Icon name="bolt" size={15} />{guide ? 'Hide guide' : 'Show guide'}</button></div></div>
-        <div className="diagram-toolbar"><div className="view-tabs" aria-label="Diagram view"><button aria-pressed={mode === 'map'} onClick={() => setMode('map')}><Icon name="circuit" size={15} />Component map</button><button aria-pressed={mode === 'source'} onClick={() => setMode('source')}><Icon name="book" size={15} />Original source</button></div><button className={`focus-toggle ${focus ? 'active' : ''}`} aria-pressed={focus} onClick={() => setFocus(!focus)}><Icon name="focus" size={15} />Focus</button></div>
+        <div className="diagram-toolbar"><div className="view-tabs" aria-label="Diagram view"><button aria-pressed={mode === 'map'} onClick={() => { setMode('map'); setTraceSource(false) }}><Icon name="circuit" size={15} />Component map</button><button aria-pressed={mode === 'trace'} onClick={() => openTrace()}><Icon name="bolt" size={15} />Trace power</button><button aria-pressed={mode === 'source'} onClick={() => mode === 'trace' && tracePoint ? traceEvidence(tracePoint.citations[0]) : setMode('source')}><Icon name="book" size={15} />Original source</button></div><button className={`focus-toggle ${focus ? 'active' : ''}`} aria-pressed={focus} disabled={mode === 'trace'} title="Focus applies to the component map and original source" onClick={() => setFocus(!focus)}><Icon name="focus" size={15} />Focus</button></div>
+        {mode === 'source' && traceSource && tracePoint && <div className="trace-source-nav">
+          <button className="button secondary small" onClick={() => openTrace()}>← Trace & record</button>
+          <label>Source trace point<select value={tracePoint.id} onChange={e => moveTracePoint(e.target.value)}>{route.map((s, i) => <option value={s.id} key={s.id}>{i + 1}. {s.title}</option>)}</select></label>
+          <p><strong>Source region:</strong> {focusRequest?.citation.label}</p>
+          <p>Gold dashed fragments follow visible source runs, not wire colors or measured current. Circuit-number continuations are not drawn through harness outlines. Some links remain unresolved.</p>
+        </div>}
         <section className="diagram-area" aria-label="Interactive diagram">
-          {mode === 'map' ? <ComponentMap selected={selected} onSelect={selectComponent} answers={active.answers} focus={focus} /> : <SourceViewer image={image} pageId={pageId} selected={selected} onSelect={selectComponent} onImport={() => setDialog('library')} focus={focus} focusRequest={focusRequest} />}
+          {mode === 'map' ? <ComponentMap selected={selected} onSelect={selectComponent} answers={active.answers} focus={focus} /> : mode === 'trace' ? <TracePanel key={active.id} item={active} onChange={changeTrace} onSource={traceEvidence} hasPage={hasPage} /> : <SourceViewer image={image} pageId={pageId} selected={selected} onSelect={selectComponent} onImport={() => setDialog('library')} focus={focus} focusRequest={focusRequest} traceLines={traceSource && tracePoint ? route.flatMap(s => s.lines) : undefined} />}
         </section>
         <div className="evidence-strip"><Icon name="book" size={15} /><span>{REVIEW_STATUS}</span><button className="text-link" onClick={() => setDialog('library')}>{matched ? `${matched} source pages available` : 'Import your original scans'} <Icon name="arrow" size={13} /></button></div>
         <ComponentDetail selected={selected} onSource={showSource} hasPage={hasPage} />
+        <button className="button secondary component-trace-entry" onClick={() => openTrace(selected)}><Icon name="bolt" size={16} />Trace power {selected.startsWith('front-') || selected.startsWith('rear-') ? 'to this lamp / bank' : 'through the blinker circuit'}</button>
         <div className="notes-bar"><button onClick={() => setDialog('notes')}><Icon name="note" /><strong>Field notes & recheck</strong><span className="count">{active.notes.length}</span><span className="muted">Observations, measurements, repair history</span><Icon name="chevron" size={16} /></button><button className="icon-button" aria-label="Export active case" onClick={() => handleExport()}><Icon name="download" /></button></div>
       </main>
-      {guide && <Guide key={active.id} item={active} onAnswer={answer} onEvidence={evidence} onEditFocus={setSelected} onNotes={() => setDialog('notes')} />}
+      {guide && <Guide key={active.id} item={active} onAnswer={answer} onEvidence={evidence} onEditFocus={setSelected} onNotes={() => setDialog('notes')} onTrace={() => openTrace()} />}
     </div>
     <input ref={caseFile} data-testid="case-file" className="visually-hidden" type="file" accept=".json,application/json" onChange={e => void handleImport(e.target.files?.[0])} />
     {dialog === 'library' && <Library images={images} onImages={setImages} onOpen={openPage} onClose={() => setDialog(null)} />}
@@ -170,7 +206,7 @@ export default function App() {
       <span className="eyebrow">THUNDERMENDER · FIRST EDITION</span><h3>Clear answers start with honest evidence.</h3><p>This release covers observation-led turn-signal triage for a 1967 Mercury Cougar, plus private browsing of your manual. Other systems are reference-only.</p>
       <h3>Private & local-first</h3><p>Images live in IndexedDB; cases live in localStorage. Nothing is uploaded. There is no analytics, account, remote image service, automatic sync, or external font. Clearing site data removes your local copies.</p>
       <h3>AI status: not connected</h3><p>The guide is deterministic, not a live model. Optional source-backed AI explanations and approved electrical test procedures are deferred. Do not enter API keys here; there is no backend or key storage.</p>
-      <h3>Evidence boundaries</h3><p>Source regions were visually located in the supplied scans, with local OCR as a reading aid. Fingerprints protect page identity. Transcriptions are not expert-reviewed. No wire colors, pin tests, fuse ratings, operating-state paths, or sequence timing are inferred.</p>
+      <h3>Evidence boundaries</h3><p>Fingerprints protect page identity. Trace power transcribes a limited set of printed circuit numbers, wire-color labels and connections from Scan 6. Battery/protection supply, return bonds and operating contact states remain unresolved; 449 versus 499 at the right-front lamp is an explicit source discrepancy. Transcriptions are not expert-reviewed. No pin tests, fuse ratings, live current or sequence timing are inferred.</p>
       <h3>No running infrastructure cost</h3><p>This local app uses no paid services. A future static Azure hosting path can stay within the $50/month infrastructure ceiling; provisioning requires separate approval. AI tokens, if later enabled, are a separate budget.</p>
       <button className="button secondary" onClick={() => setDialog('library')}><Icon name="book" />Open source library</button>
     </Modal>}

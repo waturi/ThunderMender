@@ -1,5 +1,7 @@
 import { DATASET_ID, components } from './data'
-import { answerQuestion, questionPath, questions, type Answers, type QuestionId } from './diagnostics'
+import { answerQuestion, questionPath, type Answers, type QuestionId } from './diagnostics'
+import { invalidateTrace, newTrace, validateTrace, type TraceState } from './trace'
+import { date, fields, id, invalid, record, text, validateAnswers } from './validation'
 
 export interface Note {
   id: string
@@ -19,6 +21,7 @@ export interface DiagnosticCase {
   answers: Answers
   notes: Note[]
   verification: Verification
+  trace: TraceState
 }
 export interface CaseStore { activeId: string; cases: DiagnosticCase[] }
 export const STORAGE_KEY = 'thundermender.cases.v1'
@@ -31,47 +34,16 @@ export function makeId(): string {
 }
 export function newCase(): DiagnosticCase {
   const now = new Date().toISOString()
-  return { id: makeId(), title: 'My blinkers aren’t working', createdAt: now, updatedAt: now, answers: {}, notes: [], verification: {} }
+  return { id: makeId(), title: 'My blinkers aren’t working', createdAt: now, updatedAt: now, answers: {}, notes: [], verification: {}, trace: newTrace() }
 }
 export function updateAnswer(item: DiagnosticCase, id: QuestionId, value: string): DiagnosticCase {
   const answers = answerQuestion(item.answers, id, value)
-  return answers === item.answers ? item : { ...item, answers, verification: {}, updatedAt: new Date().toISOString() }
-}
-const invalid = (detail: string): never => { throw new Error(`Invalid case data: ${detail}. Nothing was imported.`) }
-function record(v: unknown): Record<string, unknown> {
-  if (!v || typeof v !== 'object' || Array.isArray(v)) return invalid('expected an object')
-  return v as Record<string, unknown>
-}
-function fields(v: Record<string, unknown>, allowed: string[]) {
-  if (Object.keys(v).some(k => !allowed.includes(k))) invalid('unexpected fields')
-}
-function text(v: unknown, max: number, label: string): string {
-  if (typeof v !== 'string' || !v.trim() || v.length > max) return invalid(label)
-  return v
-}
-function id(v: unknown): string {
-  const value = text(v, 80, 'identifier')
-  if (!/^[a-zA-Z0-9_-]+$/.test(value)) invalid('identifier characters')
-  return value
-}
-function date(v: unknown): string {
-  const value = text(v, 30, 'date')
-  if (!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value) || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString() !== value) invalid('date format')
-  return value
+  return answers === item.answers ? item : { ...item, answers, verification: {}, trace: invalidateTrace(item.trace), updatedAt: new Date().toISOString() }
 }
 export function validateCase(value: unknown): DiagnosticCase {
   const v = record(value)
-  fields(v, ['id', 'title', 'createdAt', 'updatedAt', 'answers', 'notes', 'verification'])
-  const raw = record(v.answers)
-  fields(raw, questions.map(q => q.id))
-  let answers: Answers = {}
-  for (const question of questions) {
-    if (raw[question.id] === undefined) continue
-    const answer = text(raw[question.id], 30, 'answer')
-    try { answers = answerQuestion(answers, question.id, answer) }
-    catch { return invalid('out-of-order, unsupported, or stale answers') }
-  }
-  if (Object.keys(answers).length !== Object.keys(raw).length) invalid('stale answers')
+  fields(v, ['id', 'title', 'createdAt', 'updatedAt', 'answers', 'notes', 'verification', 'trace'])
+  const answers = validateAnswers(v.answers)
   if (!Array.isArray(v.notes) || v.notes.length > MAX_NOTES) invalid('note count')
   const notes: Note[] = (v.notes as unknown[]).map(item => {
     const n = record(item)
@@ -95,7 +67,7 @@ export function validateCase(value: unknown): DiagnosticCase {
   const createdAt = date(v.createdAt)
   const updatedAt = date(v.updatedAt)
   if (updatedAt < createdAt) invalid('case chronology')
-  return { id: id(v.id), title: text(v.title, 100, 'title'), createdAt, updatedAt, answers, notes, verification }
+  return { id: id(v.id), title: text(v.title, 100, 'title'), createdAt, updatedAt, answers, notes, verification, trace: validateTrace(v.trace, answers) }
 }
 export function exportCase(item: DiagnosticCase): string {
   return JSON.stringify({ schemaVersion: 1, datasetId: DATASET_ID, case: validateCase(item) }, null, 2)

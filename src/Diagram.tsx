@@ -3,6 +3,7 @@ import { components, getComponent, getPage, pages, type Citation } from './data'
 import type { Answers } from './diagnostics'
 import type { ManualImage } from './manuals'
 import { Icon } from './ui'
+import type { TraceLine } from './trace-data'
 
 function observation(id: string, answers: Answers): string {
   const key = ({ 'front-left': 'frontLeft', 'front-right': 'frontRight', 'rear-left': 'rearLeft', 'rear-right': 'rearRight' } as const)[id as 'front-left']
@@ -36,9 +37,10 @@ interface SourceViewerProps {
   onImport: () => void
   focus: boolean
   focusRequest: { citation: Citation; serial: number } | null
+  traceLines?: TraceLine[]
 }
 const clampZoom = (n: number) => Math.min(14, Math.max(1, n))
-export function SourceViewer({ image, pageId, selected, onSelect, onImport, focus, focusRequest }: SourceViewerProps) {
+export function SourceViewer({ image, pageId, selected, onSelect, onImport, focus, focusRequest, traceLines }: SourceViewerProps) {
   const viewport = useRef<HTMLDivElement>(null)
   const pointers = useRef(new Map<number, { x: number; y: number }>())
   const dragDistance = useRef(0)
@@ -52,7 +54,7 @@ export function SourceViewer({ image, pageId, selected, onSelect, onImport, focu
   const w = Math.min(size.w - 32, (size.h - 32) * ratio)
   const h = w / ratio
   const regions = components.flatMap(c => c.citations.filter(cite => cite.pageId === pageId && image?.pageId === pageId).map(cite => ({ component: c, citation: cite })))
-  const active = regions.find(r => r.component.id === selected)?.citation.region
+  const active = traceLines && image?.pageId === pageId && focusRequest?.citation.pageId === pageId ? focusRequest.citation.region : regions.find(r => r.component.id === selected)?.citation.region
   useEffect(() => {
     if (!image) { setUrl(''); return }
     const next = URL.createObjectURL(image.blob)
@@ -123,7 +125,11 @@ export function SourceViewer({ image, pageId, selected, onSelect, onImport, focu
       {image && url && !imageError ? <div className="source-stage" style={{ width: w, height: h, left: (size.w - w) / 2 + pan.x, top: (size.h - h) / 2 + pan.y, transform: `scale(${zoom})` }}>
         <img src={url} alt={`${page?.title ?? image.filename} — ${page?.kind ?? 'unmatched local image'}`} draggable={false} onError={() => setImageError(true)} />
         {focus && active && <svg className="source-dim" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true"><path fillRule="evenodd" d={`M0 0H1V1H0Z M${active.x} ${active.y}h${active.w}v${active.h}h-${active.w}Z`} /></svg>}
-        {regions.map(({ component, citation }, index) => <button key={`${component.id}-${index}`} className={`source-region ${selected === component.id ? 'selected' : ''}`} aria-label={`Locate ${component.name}: ${citation.label}`} aria-pressed={selected === component.id}
+        {traceLines && image.pageId === pageId && <svg className="trace-overlay" viewBox="0 0 3300 2550" preserveAspectRatio="none" aria-label="Source-checked wire fragments, not live electricity">
+          {traceLines.filter(l => l.pageId === pageId).map((l, index) => <polyline key={index} points={l.points.map(([x, y]) => `${x * 3300},${y * 2550}`).join(' ')} vectorEffect="non-scaling-stroke" style={{ strokeWidth: 2 / zoom, strokeDasharray: `${5 / zoom} ${3 / zoom}` }} />)}
+          {active && <rect x={active.x * 3300} y={active.y * 2550} width={active.w * 3300} height={active.h * 2550} vectorEffect="non-scaling-stroke" style={{ strokeWidth: 1.5 / zoom, strokeDasharray: `${4 / zoom} ${4 / zoom}` }} />}
+        </svg>}
+        {!traceLines && regions.map(({ component, citation }, index) => <button key={`${component.id}-${index}`} className={`source-region ${selected === component.id ? 'selected' : ''}`} aria-label={`Locate ${component.name}: ${citation.label}`} aria-pressed={selected === component.id}
           style={{ left: `${citation.region.x * 100}%`, top: `${citation.region.y * 100}%`, width: `${citation.region.w * 100}%`, height: `${citation.region.h * 100}%`, borderWidth: (selected === component.id ? 2 : 1) / zoom }}
           onClick={event => { if (event.detail === 0 || dragDistance.current < 6) onSelect(component.id) }} title={component.name}><span style={{ transform: `scale(${1 / zoom})` }}>{components.indexOf(component) + 1}</span></button>)}
       </div> : <div className="source-empty"><div className="empty-book"><Icon name="book" size={38} /></div><span className="eyebrow">YOUR MANUAL, KEPT PRIVATE</span>
